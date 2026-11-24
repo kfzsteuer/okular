@@ -156,7 +156,7 @@ button{cursor:pointer}
 /* ---------- Einstellungen ---------- */
 const CFG = {
   proxy: '',                       // Adresse des Flug-Proxys (proxy.php oder Cloudflare Worker); leer = ohne Flüge
-  caltrans: ['d3','d4','d7','d11','d12'], // Kalifornien-Bezirke für Verkehrskameras
+  caltrans: ['d1','d2','d3','d4','d5','d6','d7','d8','d9','d10','d11','d12'], // Kalifornien-Bezirke für Verkehrskameras
   flightZoom: 6                    // ab dieser Zoomstufe werden alle Flüge im Ausschnitt geladen
 };
 const CENT = {"AW":[12.5,-70,"Aruba"],"AF":[33,65,"Afghanistan"],"AO":[-12.5,18.5,"Angola"],"AI":[18.3,-63.2,"Anguilla"],"AX":[60.1,19.9,"Åland"],"AL":[41,20,"Albanien"],"AD":[42.5,1.5,"Andorra"],"AE":[24,54,"Vereinigte Arabische Emirate"],"AR":[-34,-64,"Argentinien"],"AM":[40,45,"Armenien"],"AS":[-14.3,-170,"Amerikanisch-Samoa"],"AQ":[-90,0,"Antarktis"],"TF":[-49.2,69.2,"Französische Süd- und Antarktisgebiete"],"AG":[17.1,-61.8,"Antigua und Barbuda"],"AU":[-27,133,"Australien"],"AT":[47.3,13.3,"Österreich"],"AZ":[40.5,47.5,"Aserbaidschan"],"BI":[-3.5,30,"Burundi"],"BE":[50.8,4,"Belgien"],"BJ":[9.5,2.3,"Benin"],"BF":[13,-2,"Burkina Faso"],"BD":[24,90,"Bangladesch"],"BG":[43,25,"Bulgarien"],"BH":[26,50.6,"Bahrain"],"BS":[24.3,-76,"Bahamas"],"BA":[44,18,"Bosnien und Herzegowina"],"BL":[18.5,-63.4,"Saint-Barthélemy"],"SH":[-15.9,-5.7,"St. Helena, Ascension und Tristan da Cunha"],"BY":[53,28,"Belarus"],"BZ":[17.3,-88.7,"Belize"],"BM":[32.3,-64.7,"Bermuda"],"BO":[-17,-65,"Bolivien"],"BQ":[12.2,-68.2,"Karibische Niederlande"],"BR":[-10,-55,"Brasilien"],"BB":[13.2,-59.5,"Barbados"],"BN":[4.5,114.7,"Brunei"],"BT":[27.5,90.5,"Bhutan"],"BV":[-54.4,3.4,"Bouvetinsel"],"BW":[-22,24,"Botswana"],"CF":[7,21,"Zentralafrikanische Republik"],"CA":[60,-95,"Kanada"],"CC":[-12.5,96.8,"Kokosinseln"],"CH":[47,8,"Schweiz"],"CL":[-30,-71,"Chile"],"CN":[35,105,"China"],"CI":[8,-5,"Côte d'Ivoire"],"CM":[6,12,"Kamerun"],"CD":[0,25,"Kongo (Dem. Rep.)"],"CG":[-1,15,"Kongo"],"CK":[-21.2,-159.8,"Cookinseln"],"CO":[4,-72,"Kolumbien"],"KM":[-12.2,44.3,"Komoren"],"CV":[16,-24,"Kap Verde"],"CR":[10,-84,"Costa Rica"],"CU":[21.5,-80,"Kuba"],"CW":[12.1,-68.9,"Curaçao"],"CX":[-10.5,105.7,"Weihnachtsinsel"],"KY":[19.5,-80.5,"Kaimaninseln"],"CY":[35,33,"Zypern"],"CZ":[49.8,15.5,"Tschechien"],"DE":[51,9,"Deutschland"],"DJ":[11.5,43,"Dschibuti"],"DM":[15.4,-61.3,"Dominica"],"DK":[56,10,"Dänemark"],"DO":[19,-70.7,"Dominikanische Republik"],"DZ":[28,3,"Algerien"],"EC":[-2,-77.5,"Ecuador"],"EG":[27,30,"Ägypten"],"ER":[15,39,"Eritrea"],"EH":[24.5,-13,"Westsahara"],"ES":[40,-4,"Spanien"],"EE":[59,26,"Estland"],"ET":[8,38,"Äthiopien"],"FI":[64,26,"Finnland"],"FJ":[-18,175,"Fidschi"],"FK":[-51.7,-59,"Falklandinseln"],"FR":[46,2,"Frankreich"],"FO":[62,-7,"Färöer-Inseln"],"FM":[6.9,158.3,"Mikronesien"],"GA":[-1,11.8,"Gabun"],"GB":[54,-2,"Vereinigtes Königreich"],"GE":[42,43.5,"Georgien"],"GG":[49.5,-2.6,"Guernsey"],"GH":[8,-2,"Ghana"],"GI":[36.1,-5.3,"Gibraltar"],"GN":[11,-10,"Guinea"],"GP":[16.3,-61.6,"Guadeloupe"],"GM":[13.5,-16.6,"Gambia"],"GW":[12,-15,"Guinea-Bissau"],"GQ":[2,10,"Äquatorialguinea"],"GR":[39,22,"Griechenland"],"GD":[12.1,-61.7,"Grenada"],"GL":[72,-40,"Grönland"],"GT":[15.5,-90.2,"Guatemala"],"GF":[4,-53,"Französisch-Guayana"],"GU":[13.5,144.8,"Guam"],"GY":[5,-59,"Guyana"],"HK":[22.3,114.2,"Hongkong"],"HM":[-53.1,72.5,"Heard und die McDonaldinseln"],"HN":[15,-86.5,"Honduras"],"HR":[45.2,15.5,"Kroatien"],"HT":[19,-72.4,"Haiti"],"HU":[47,20,"Ungarn"],"ID":[-5,120,"Indonesien"],"IM":[54.3,-4.5,"Insel Man"],"IN":[20,77,"Indien"],"IO":[-6,71.5,"Britisches Territorium im Indischen Ozean"],"IE":[53,-8,"Irland"],"IR":[32,53,"Iran"],"IQ":[33,44,"Irak"],"IS":[65,-18,"Island"],"IL":[31.5,35.1,"Israel"],"IT":[42.8,12.8,"Italien"],"JM":[18.3,-77.5,"Jamaika"],"JE":[49.3,-2.2,"Jersey"],"JO":[31,36,"Jordanien"],"JP":[36,138,"Japan"],"KZ":[48,68,"Kasachstan"],"KE":[1,38,"Kenia"],"KG":[41,75,"Kirgisistan"],"KH":[13,105,"Kambodscha"],"KI":[1.4,173,"Kiribati"],"KN":[17.3,-62.7,"St. Kitts und Nevis"],"KR":[37,127.5,"Südkorea"],"XK":[42.7,21.2,"Kosovo"],"KW":[29.5,45.8,"Kuwait"],"LA":[18,105,"Laos"],"LB":[33.8,35.8,"Libanon"],"LR":[6.5,-9.5,"Liberia"],"LY":[25,17,"Libyen"],"LC":[13.9,-61,"St. Lucia"],"LI":[47.3,9.5,"Liechtenstein"],"LK":[7,81,"Sri Lanka"],"LS":[-29.5,28.5,"Lesotho"],"LT":[56,24,"Litauen"],"LU":[49.8,6.2,"Luxemburg"],"LV":[57,25,"Lettland"],"MO":[22.2,113.6,"Macao"],"MF":[18.1,-63.9,"Saint-Martin"],"MA":[32,-5,"Marokko"],"MC":[43.7,7.4,"Monaco"],"MD":[47,29,"Moldawien"],"MG":[-20,47,"Madagaskar"],"MV":[3.3,73,"Malediven"],"MX":[23,-102,"Mexiko"],"MH":[9,168,"Marshallinseln"],"MK":[41.8,22,"Nordmazedonien"],"ML":[17,-4,"Mali"],"MT":[35.8,14.6,"Malta"],"MM":[22,98,"Myanmar"],"ME":[42.5,19.3,"Montenegro"],"MN":[46,105,"Mongolei"],"MP":[15.2,145.8,"Nördliche Marianen"],"MZ":[-18.2,35,"Mosambik"],"MR":[20,-12,"Mauretanien"],"MS":[16.8,-62.2,"Montserrat"],"MQ":[14.7,-61,"Martinique"],"MU":[-20.3,57.6,"Mauritius"],"MW":[-13.5,34,"Malawi"],"MY":[2.5,112.5,"Malaysia"],"YT":[-12.8,45.2,"Mayotte"],"NA":[-22,17,"Namibia"],"NC":[-21.5,165.5,"Neukaledonien"],"NE":[16,8,"Niger"],"NF":[-29,168,"Norfolkinsel"],"NG":[10,8,"Nigeria"],"NI":[13,-85,"Nicaragua"],"NU":[-19,-169.9,"Niue"],"NL":[52.5,5.8,"Niederlande"],"NO":[62,10,"Norwegen"],"NP":[28,84,"Nepal"],"NR":[-0.5,166.9,"Nauru"],"NZ":[-41,174,"Neuseeland"],"OM":[21,57,"Oman"],"PK":[30,70,"Pakistan"],"PA":[9,-80,"Panama"],"PN":[-25.1,-130.1,"Pitcairninseln"],"PE":[-10,-76,"Peru"],"PH":[13,122,"Philippinen"],"PW":[7.5,134.5,"Palau"],"PG":[-6,147,"Papua-Neuguinea"],"PL":[52,20,"Polen"],"PR":[18.3,-66.5,"Puerto Rico"],"KP":[40,127,"Nordkorea"],"PT":[39.5,-8,"Portugal"],"PY":[-23,-58,"Paraguay"],"PS":[31.9,35.2,"Palästina"],"PF":[-15,-140,"Französisch-Polynesien"],"QA":[25.5,51.3,"Katar"],"RE":[-21.1,55.5,"Réunion"],"RO":[46,25,"Rumänien"],"RU":[60,100,"Russland"],"RW":[-2,30,"Ruanda"],"SA":[25,45,"Saudi-Arabien"],"SD":[15,30,"Sudan"],"SN":[14,-14,"Senegal"],"SG":[1.4,103.8,"Singapur"],"GS":[-54.5,-37,"Südgeorgien und die Südlichen Sandwichinseln"],"SJ":[78,20,"Spitzbergen und Jan Mayen"],"SB":[-8,159,"Salomonen"],"SL":[8.5,-11.5,"Sierra Leone"],"SV":[13.8,-88.9,"El Salvador"],"SM":[43.8,12.4,"San Marino"],"SO":[10,49,"Somalia"],"PM":[46.8,-56.3,"St. Pierre und Miquelon"],"RS":[44,21,"Serbien"],"SS":[7,30,"Südsudan"],"ST":[1,7,"São Tomé und Príncipe"],"SR":[4,-56,"Suriname"],"SK":[48.7,19.5,"Slowakei"],"SI":[46.1,14.8,"Slowenien"],"SE":[62,15,"Schweden"],"SZ":[-26.5,31.5,"Swasiland"],"SX":[18,-63,"Sint Maarten"],"SC":[-4.6,55.7,"Seychellen"],"SY":[35,38,"Syrien"],"TC":[21.8,-71.6,"Turks-und Caicosinseln"],"TD":[15,19,"Tschad"],"TG":[8,1.2,"Togo"],"TH":[15,100,"Thailand"],"TJ":[39,71,"Tadschikistan"],"TK":[-9,-172,"Tokelau"],"TM":[40,60,"Turkmenistan"],"TL":[-8.8,125.9,"Osttimor"],"TO":[-20,-175,"Tonga"],"TT":[11,-61,"Trinidad und Tobago"],"TN":[34,9,"Tunesien"],"TR":[39,35,"Türkei"],"TV":[-8,178,"Tuvalu"],"TW":[23.5,121,"Taiwan"],"TZ":[-6,35,"Tansania"],"UG":[1,32,"Uganda"],"UA":[49,32,"Ukraine"],"UM":[19.3,166.6,"Kleinere Inselbesitzungen der Vereinigten Staaten"],"UY":[-33,-56,"Uruguay"],"US":[38,-97,"Vereinigte Staaten"],"UZ":[41,64,"Usbekistan"],"VA":[41.9,12.5,"Vatikanstadt"],"VC":[13.3,-61.2,"St. Vincent und die Grenadinen"],"VE":[8,-66,"Venezuela"],"VG":[18.4,-64.6,"Britische Jungferninseln"],"VI":[18.4,-64.9,"Amerikanische Jungferninseln"],"VN":[16.2,107.8,"Vietnam"],"VU":[-16,167,"Vanuatu"],"WF":[-13.3,-176.2,"Wallis und Futuna"],"WS":[-13.6,-172.3,"Samoa"],"YE":[15,48,"Jemen"],"ZA":[-29,24,"Südafrika"],"ZM":[-15,30,"Sambia"],"ZW":[-20,30,"Simbabwe"]};
@@ -190,10 +190,10 @@ const dist = (a, b, c, d) => { const R = 6371, r = Math.PI/180, x = (d-b)*r*Math
 
 /* ---------- Karte ---------- */
 const view = store.get('view', {c:[35,15], z:3});
-const map = L.map('map', {preferCanvas:true, worldCopyJump:true, zoomControl:false, minZoom:2}).setView(view.c, view.z);
+const cv = L.canvas({padding:.4, tolerance:7});
+const map = L.map('map', {renderer:cv, worldCopyJump:true, zoomControl:false, minZoom:2}).setView(view.c, view.z);
 map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
 L.control.zoom({position:'bottomright'}).addTo(map);
-const cv = L.canvas({padding:.4});
 const esri = (svc, o = {}) => L.tileLayer('https://services.arcgisonline.com/arcgis/rest/services/' + svc + '/MapServer/tile/{z}/{y}/{x}', Object.assign({maxZoom:19, maxNativeZoom:16, attribution:'Karte © Esri, HERE, Garmin, OpenStreetMap-Mitwirkende'}, o));
 const BASES = {
   dark:  L.layerGroup([esri('Canvas/World_Dark_Gray_Base'), esri('Canvas/World_Dark_Gray_Reference', {attribution:''})]),
@@ -214,7 +214,7 @@ map.on('moveend', () => store.set('view', {c:[map.getCenter().lat, map.getCenter
 const saved = store.get('layers', {});
 const L_ = (id, name, color, src, every, on) => ({id, name, color, src, every, on: saved[id] ?? on, group: L.layerGroup(), items: [], status:'off', count:0, t:0});
 const LAYERS = [
-  L_('cams',   'Webcams',              '#d6127e', 'Digitraffic (FI) · Caltrans (US-CA)', 0,    true),
+  L_('cams',   'Webcams',              '#d6127e', 'Finnland · London · Kalifornien · Hongkong · Singapur', 0,    true),
   L_('flights','Flüge im Ausschnitt',  '#eef2ee', 'adsb.lol über Proxy',                30,   true),
   L_('mil',    'Militärflüge weltweit','#ff5a5f', 'adsb.lol über Proxy',                60,   true),
   L_('ships',  'Schiffe Ostsee',       '#4fb6d8', 'Digitraffic AIS',                     60,   true),
@@ -287,10 +287,10 @@ function camCard(item){
     <div class="img"><span>Bild lädt …</span><img alt="Kamerabild ${esc(item.name)}"><em></em></div>
     <div class="btns" id="presets">${imgs.length > 1 ? imgs.map((_, k) => `<button type="button" data-k="${k}" aria-pressed="${k === 0}">Blick ${k + 1}</button>`).join('') : ''}</div>
     ${rows([['Ort', item.place || ''], ['Quelle', item.src], ['Aktualisierung', item.freq]])}
-    <div class="btns"><button type="button" id="fav"></button><button type="button" id="reload">Neu laden</button>${item.video ? link(item.video, 'Videostream') : ''}</div>`,
+    <div class="btns"><button type="button" id="fav"></button><button type="button" id="reload">Neu laden</button>${item.mp4 ? '<button type="button" id="vid">Videoclip abspielen</button>' : ''}${item.video ? link(item.video, 'Videostream') : ''}</div>`,
     c => {
       const img = c.querySelector('img'), em = c.querySelector('em'), sp = c.querySelector('.img span');
-      const load = () => { img.style.opacity = 0; img.src = imgs[i] + (imgs[i].includes('?') ? '&' : '?') + 't=' + Date.now(); };
+      const load = () => { img.style.opacity = 0; img.src = item.fixed ? imgs[i] : imgs[i] + (imgs[i].includes('?') ? '&' : '?') + 't=' + Date.now(); };
       img.onload = () => { img.style.opacity = 1; em.textContent = 'geladen ' + hhmm(Date.now()); };
       img.onerror = () => { sp.textContent = 'Bild gerade nicht verfügbar'; em.textContent = ''; };
       const favBtn = c.querySelector('#fav');
@@ -299,7 +299,9 @@ function camCard(item){
         favs = isFav() ? favs.filter(f => f.id !== item.id) : [...favs, {id:item.id, name:item.name, img:imgs[0], lat:item.lat, lon:item.lon}];
         store.set('favs', favs); paint(); renderFavs();
       };
-      c.querySelector('#reload').onclick = load;
+      c.querySelector('#reload').onclick = () => { const v = c.querySelector('video'); if (v) v.remove(); load(); };
+      const vb = c.querySelector('#vid');
+      if (vb) vb.onclick = () => { let v = c.querySelector('video'); if (!v){ v = document.createElement('video'); Object.assign(v, {muted:true, autoplay:true, loop:true, playsInline:true, controls:true}); v.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000'; v.src = item.mp4 + '?t=' + Date.now(); c.querySelector('.img').append(v); } };
       c.querySelectorAll('#presets button').forEach(b => b.onclick = () => {
         i = +b.dataset.k; c.querySelectorAll('#presets button').forEach(x => x.setAttribute('aria-pressed', x === b)); load();
       });
@@ -399,27 +401,43 @@ setInterval(drawSats, 3000);
 /* ---------- Lader je Ebene ---------- */
 const LOAD = {
   async cams(l){
-    const out = [];
-    const fi = getJSON('https://tie.digitraffic.fi/api/weathercam/v1/stations').then(j => {
-      for (const f of j.features){
-        const p = f.properties, [lon, lat] = f.geometry.coordinates; const pr = (p.presets || []).filter(x => x.inCollection !== false);
-        if (!pr.length || p.collectionStatus === 'REMOVED_TEMPORARILY') continue;
-        out.push({id:'fi-' + p.id, name: p.name.replace(/^[a-z]+\d+_/i, '').replace(/_/g, ' '), place:'Finnland', src:'Digitraffic', freq:'ca. alle 10 Min.', lat, lon, imgs: pr.map(x => 'https://weathercam.digitraffic.fi/' + x.id + '.jpg')});
+    l.group.clearLayers(); l.items = []; l.count = 0;
+    const seen = new Set();
+    const add = list => {
+      for (const it of list){
+        if (!isFinite(it.lat) || !isFinite(it.lon) || seen.has(it.id)) continue;
+        seen.add(it.id); it.kind = 'Webcam'; it.open = () => camCard(it); dotMarker(it.lat, it.lon, '#d6127e', 4, it, l);
       }
-    });
-    const ca = CFG.caltrans.map(d => getJSON(`https://cwwp2.dot.ca.gov/data/${d}/cctv/cctvStatusD${d.slice(1).padStart(2, '0')}.json`).then(j => {
-      for (const x of j.data){
+      l.count = l.items.length; renderLayers();
+    };
+    const SRC = [
+      // Finnland: Digitraffic, ca. 800 Standorte mit mehreren Blickwinkeln
+      () => getJSON('https://tie.digitraffic.fi/api/weathercam/v1/stations').then(j => add(j.features.filter(f => (f.properties.presets || []).length).map(f => {
+        const p = f.properties, [lon, lat] = f.geometry.coordinates;
+        return {id:'fi-' + p.id, name:p.name.replace(/^[a-z]+\d+_/i, '').replace(/_/g, ' '), place:'Finnland', src:'Digitraffic', freq:'ca. alle 10 Min.', lat, lon, imgs:p.presets.map(x => 'https://weathercam.digitraffic.fi/' + x.id + '.jpg')};
+      }))),
+      // London: Transport for London JamCams, mit kurzen Videoclips
+      () => getJSON('https://api.tfl.gov.uk/Place/Type/JamCam').then(j => add(j.map(c => {
+        const pr = Object.fromEntries((c.additionalProperties || []).map(a => [a.key, a.value]));
+        return pr.available === 'false' || !pr.imageUrl ? {} : {id:'tfl-' + c.id, name:c.commonName, place:'London', src:'Transport for London', freq:'ca. alle 5 Min.', lat:c.lat, lon:c.lon, imgs:[pr.imageUrl], mp4:pr.videoUrl || ''};
+      }))),
+      // Hongkong: Transport Department, ca. 1.000 Kameras
+      () => getJSON('https://static.data.gov.hk/td/traffic-snapshot-images/code/Traffic_Camera_Locations_En.xml', {text:true}).then(t => {
+        const d = new DOMParser().parseFromString(t, 'text/xml'), g = (e, k) => e.getElementsByTagName(k)[0]?.textContent || '';
+        add([...d.getElementsByTagName('image')].map(e => ({id:'hk-' + g(e, 'key'), name:g(e, 'description').replace(/\s*\[[^\]]+\]$/, ''), place:[g(e, 'district'), g(e, 'region'), 'Hongkong'].filter(Boolean).join(', '), src:'HK Transport Department', freq:'ca. alle 2 Min.', lat:+g(e, 'latitude'), lon:+g(e, 'longitude'), imgs:[g(e, 'url')]})));
+      }),
+      // Singapur: Land Transport Authority
+      () => getJSON('https://api.data.gov.sg/v1/transport/traffic-images').then(j => add((j.items?.[0]?.cameras || []).map(c => ({id:'sg-' + c.camera_id, name:'Kamera ' + c.camera_id, place:'Singapur', src:'LTA Singapur', freq:'ca. alle 1 Min.', lat:c.location.latitude, lon:c.location.longitude, imgs:[c.image], fixed:true})))),
+      // Kalifornien: Caltrans, alle 12 Bezirke
+      ...CFG.caltrans.map(d => () => getJSON(`https://cwwp2.dot.ca.gov/data/${d}/cctv/cctvStatusD${d.slice(1).padStart(2, '0')}.json`).then(j => add(j.data.map(x => {
         const c = x.cctv, loc = c.location, img = c.imageData?.static?.currentImageURL;
-        if (c.inService !== 'true' || !img) continue;
-        out.push({id:'ca-' + loc.district + '-' + c.index, name: loc.locationName, place: [loc.nearbyPlace, loc.county, 'Kalifornien'].filter(Boolean).join(', '), src:'Caltrans', freq: (c.imageData.static.currentImageUpdateFrequency || '?') + ' Min.', lat:+loc.latitude, lon:+loc.longitude, imgs:[img], video: c.imageData.streamingVideoURL || ''});
-      }
-    }));
-    const res = await Promise.allSettled([fi, ...ca]);
-    if (!out.length) throw new Error('keine Kameras geladen');
-    l.group.clearLayers(); l.items = [];
-    for (const it of out){ if (!isFinite(it.lat) || !isFinite(it.lon)) continue; it.kind = 'Webcam'; it.open = () => camCard(it); dotMarker(it.lat, it.lon, '#d6127e', 4, it, l); }
-    l.count = l.items.length;
-    if (res.some(r => r.status === 'rejected')) console.warn('[OKULAR] einige Kameraquellen fehlen');
+        return c.inService !== 'true' || !img ? {} : {id:'ca-' + loc.district + '-' + c.index, name:loc.locationName, place:[loc.nearbyPlace, loc.county, 'Kalifornien'].filter(Boolean).join(', '), src:'Caltrans', freq:(c.imageData.static.currentImageUpdateFrequency || '?') + ' Min.', lat:+loc.latitude, lon:+loc.longitude, imgs:[img], video:c.imageData.streamingVideoURL || ''};
+      }))))
+    ];
+    const res = await Promise.allSettled(SRC.map(f => f()));
+    const bad = res.filter(r => r.status === 'rejected').length;
+    if (!l.items.length) throw new Error('keine Kameras geladen');
+    if (bad) console.warn('[OKULAR] ' + bad + ' Kameraquelle(n) nicht erreichbar');
   },
   async flights(l){
     if (map.getZoom() < CFG.flightZoom){ l.group.clearLayers(); l.items = []; l.count = 0; return 'zoom'; }

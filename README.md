@@ -32,7 +32,7 @@ und dann `http://localhost:8000` öffnen.
 
 | Ebene | Quelle | Abdeckung |
 |---|---|---|
-| Webcams | Digitraffic (Finnische Verkehrsbehörde), Caltrans | ca. 3.000 Kameras: Finnland und Kalifornien, Standbilder |
+| Webcams | Digitraffic (FI), Transport for London, Caltrans, HK Transport Department, LTA Singapur | ca. 6.000 Verkehrskameras in Finnland, London, Kalifornien, Hongkong und Singapur; Standbilder, London mit Videoclips |
 | Flüge im Ausschnitt | adsb.lol (Ausweichquelle airplanes.live), über `proxy.php` | weltweit, ab Zoomstufe 6, Radius bis 250 Seemeilen |
 | Militärflüge | adsb.lol `/v2/mil`, über `proxy.php` | weltweit, nur Flugzeuge mit eingeschaltetem Transponder |
 | Schiffe | Digitraffic AIS | Ostsee, vor allem Finnischer Meerbusen und Bottnischer Meerbusen |
@@ -50,7 +50,7 @@ und dann `http://localhost:8000` öffnen.
 
 Ganz oben im Skript von `index.html` steht `CFG`:
 - `proxy`: Pfad oder Adresse des Flug-Proxys, z. B. `'proxy.php'` oder die Adresse eines Cloudflare Workers. Leer = keine Flüge.
-- `caltrans`: welche Kalifornien-Bezirke geladen werden (`d1` bis `d12`). Mehr Bezirke heißt mehr Kameras und längere Ladezeit.
+- `caltrans`: welche Kalifornien-Bezirke geladen werden (`d1` bis `d12`, Standard: alle). Weniger Bezirke heißt schnellere Ladezeit.
 - `flightZoom`: ab welcher Zoomstufe alle Flüge geladen werden.
 
 Meerengen und Texte stehen in der Liste `CHOKE` und lassen sich dort ergänzen.
