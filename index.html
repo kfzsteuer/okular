@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OKULAR · Live-Weltkarte</title>
+<meta name="theme-color" content="#0d1c24">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;800&display=swap">
+<style>
+/* VOICE: nüchternes Lagezentrum – knapp, präzise, ruhig
+   IDEA: eine Seekarte bei Nacht, auf der die Welt live eingetragen wird
+   PICTURE: die Karte selbst, randlos; Panels liegen darauf wie Legenden
+   COLOUR and TYPE: Nachtsee #0d1c24, Papier #eef2ee, Magenta #d6127e für Kameras; Overpass
+   LAYOUT: Kopfleiste, Legende links, Detailkarte rechts, Ticker unten; mobil als Schubladen */
+:root{color-scheme:dark;--bg:#0d1c24;--panel:rgba(13,28,36,.92);--line:rgba(190,215,225,.14);--ink:#eef2ee;--dim:#9fb3bb;--acc:#d6127e;--ok:#5fd39a;--warn:#f0b43c;--bad:#ff5a5f}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 Overpass,system-ui,sans-serif;overflow:hidden}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+#map{position:fixed;inset:0;background:#0a161c}
+.leaflet-container{font:inherit;background:#0a161c}
+.leaflet-control-attribution{background:rgba(13,28,36,.8)!important;color:var(--dim)!important;font-size:11px}
+.leaflet-control-attribution a{color:var(--ink)!important}
+.leaflet-bottom{bottom:62px}
+.leaflet-bar a{background:var(--panel)!important;color:var(--ink)!important;border-color:var(--line)!important}
+.top{position:fixed;z-index:1000;top:10px;left:10px;right:10px;display:flex;gap:10px;align-items:center;padding:8px 10px 8px 14px;background:var(--panel);border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(8px)}
+.brand{font-weight:800;font-size:20px;letter-spacing:.02em;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.brand i{width:12px;height:12px;border-radius:50%;background:var(--acc);box-shadow:0 0 0 4px rgba(214,18,126,.25);animation:pulse 2.4s infinite}
+@keyframes pulse{50%{box-shadow:0 0 0 8px rgba(214,18,126,0)}}
+.search{position:relative;flex:1;max-width:460px}
+.search input{width:100%;height:40px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.06);padding:0 12px;font-size:16px}
+.search input::placeholder{color:var(--dim)}
+#results{position:absolute;top:46px;left:0;right:0;background:#10242e;border:1px solid var(--line);border-radius:10px;overflow:hidden;display:none;max-height:60vh;overflow-y:auto}
+#results button{display:flex;gap:10px;width:100%;text-align:left;padding:10px 12px;border:0;background:none;border-bottom:1px solid var(--line)}
+#results button:hover,#results button:focus{background:rgba(255,255,255,.07)}
+#results small{color:var(--dim);margin-left:auto;white-space:nowrap}
+.stats{display:flex;gap:16px;margin-left:auto;white-space:nowrap}
+.stats div{display:flex;flex-direction:column;line-height:1.1}
+.stats b{font-size:17px;font-variant-numeric:tabular-nums}
+.stats span{font-size:12px;color:var(--dim)}
+.clock{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap;padding-left:12px;border-left:1px solid var(--line)}
+.clock span{display:block;font-size:12px;color:var(--dim);font-weight:400}
+#togglePanel{display:none;height:40px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:rgba(255,255,255,.06)}
+#panel{position:fixed;z-index:999;top:76px;left:10px;bottom:70px;width:300px;background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow-y:auto;padding:14px;backdrop-filter:blur(8px)}
+#panel h2{font-size:13px;color:var(--dim);font-weight:600;margin:16px 0 8px}
+#panel h2:first-child{margin-top:0}
+.layer{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:8px 6px;border-radius:9px;cursor:pointer;user-select:none}
+.layer:hover{background:rgba(255,255,255,.05)}
+.layer input{position:absolute;opacity:0;pointer-events:none}
+.sw{width:18px;height:18px;border-radius:5px;border:2px solid var(--c);display:grid;place-items:center}
+.layer input:checked+.sw{background:var(--c)}
+.layer input:focus-visible+.sw{outline:2px solid var(--ink);outline-offset:2px}
+.layer .n{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+.layer .s{grid-column:2/4;font-size:12px;color:var(--dim);display:flex;gap:6px;align-items:center}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--dim);flex:none}
+.dot.ok{background:var(--ok)}.dot.load{background:var(--warn);animation:blink 1s infinite}.dot.err,.dot.proxy{background:var(--bad)}
+@keyframes blink{50%{opacity:.3}}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;background:rgba(255,255,255,.05);padding:4px;border-radius:10px}
+.seg button{border:0;background:none;padding:8px 4px;border-radius:7px;font-size:14px}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--bg);font-weight:600}
+.row{display:flex;justify-content:space-between;gap:8px;padding:5px 0;font-size:14px;border-bottom:1px solid var(--line)}
+.row:last-child{border:0}
+.row b{font-variant-numeric:tabular-nums;white-space:nowrap}
+.up{color:var(--ok)}.down{color:var(--bad)}
+#favs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+#favs button{border:0;padding:0;background:#000;border-radius:8px;overflow:hidden;position:relative;aspect-ratio:16/10}
+#favs img{width:100%;height:100%;object-fit:cover;display:block}
+#favs span{position:absolute;left:0;right:0;bottom:0;padding:3px 6px;font-size:12px;background:linear-gradient(transparent,rgba(0,0,0,.8));text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.empty{font-size:13px;color:var(--dim)}
+#card{position:fixed;z-index:1001;top:76px;right:10px;width:380px;max-height:calc(100% - 150px);overflow-y:auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;backdrop-filter:blur(8px)}
+#card[hidden]{display:none}
+#card .x{position:absolute;top:8px;right:8px;width:36px;height:36px;border-radius:9px;border:0;background:rgba(255,255,255,.08);font-size:20px;line-height:1}
+#card .kind{font-size:13px;color:var(--c,var(--dim));font-weight:600}
+#card h3{font-size:22px;line-height:1.15;margin:2px 40px 10px 0;text-wrap:balance}
+#card .img{position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:16/10;margin:0 0 10px;display:grid;place-items:center;color:var(--dim);font-size:13px}
+#card .img img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+#card .img em{position:absolute;left:8px;top:8px;background:rgba(0,0,0,.65);padding:2px 8px;border-radius:6px;font-style:normal;font-size:12px;color:#fff}
+.btns{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}
+.btns button,.btns a{min-height:38px;padding:8px 12px;border-radius:9px;border:1px solid var(--line);background:rgba(255,255,255,.06);text-decoration:none;color:var(--ink);font-size:14px;display:inline-flex;align-items:center}
+.btns [aria-pressed=true]{background:var(--ink);color:var(--bg)}
+.note{font-size:13px;color:var(--dim);margin:10px 0 0}
+.ticker{position:fixed;z-index:1000;left:10px;right:10px;bottom:10px;height:50px;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:0 8px;backdrop-filter:blur(8px)}
+.ticker strong{font-size:13px;color:var(--dim);padding:0 6px;white-space:nowrap}
+#tick{display:flex;gap:6px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;flex:1}
+#tick::-webkit-scrollbar{display:none}
+#tick button{flex:none;scroll-snap-align:start;border:1px solid var(--line);background:rgba(255,255,255,.04);border-radius:9px;padding:6px 10px;font-size:13px;white-space:nowrap;display:flex;gap:8px;align-items:center}
+#tick button i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+#tick time{color:var(--dim)}
+.plane{color:var(--c);filter:drop-shadow(0 0 2px rgba(0,0,0,.9))}
+.plane svg{width:100%;height:100%;display:block}
+.ring{border:2px solid var(--bad);border-radius:50%;animation:ring 2s infinite}
+@keyframes ring{0%{transform:scale(.4);opacity:1}100%{transform:scale(1.4);opacity:0}}
+.sat{width:8px;height:8px;background:#fff;transform:rotate(45deg);box-shadow:0 0 6px #fff}
+.iss{width:22px;height:22px;display:grid;place-items:center;font-size:11px;font-weight:800;background:#fff;color:var(--bg);border-radius:6px;box-shadow:0 0 0 3px rgba(255,255,255,.25)}
+#toast{position:fixed;z-index:2000;left:50%;bottom:76px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:9px;font-size:14px;opacity:0;transition:opacity .3s;pointer-events:none}
+#toast.on{opacity:1}
+@media(max-width:1100px){.stats div:nth-child(n+3){display:none}}
+@media(max-width:800px){
+ .stats{display:none}#togglePanel{display:block}
+ #panel{display:none;top:auto;bottom:70px;width:auto;right:10px;max-height:62vh}
+ body.panel-open #panel{display:block}
+ #card{top:auto;bottom:70px;left:10px;right:10px;width:auto;max-height:62vh}
+}
+@media(max-width:480px){.brand span{display:none}.clock span{display:none}.top{gap:8px}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="map" aria-label="Live-Weltkarte"></div>
+
+<header class="top">
+  <div class="brand"><i></i><span>OKULAR</span></div>
+  <form class="search" id="searchForm" role="search" autocomplete="off">
+    <input id="q" type="search" placeholder="Ort, Kamera, Schiff, Flug suchen …" aria-label="Suche">
+    <div id="results" role="listbox"></div>
+  </form>
+  <div class="stats" id="stats"></div>
+  <button id="togglePanel" type="button" aria-expanded="false">Ebenen</button>
+  <div class="clock" id="clock">--:--:--<span>UTC</span></div>
+</header>
+
+<aside id="panel">
+  <h2>Ebenen</h2>
+  <div id="layers"></div>
+  <h2>Kartengrund</h2>
+  <div class="seg" id="bases">
+    <button type="button" data-b="dark">Nacht</button>
+    <button type="button" data-b="sat">Satellit</button>
+    <button type="button" data-b="light">Hell</button>
+  </div>
+  <h2>Überlagerungen</h2>
+  <div id="overlays"></div>
+  <h2>Merkliste Kameras</h2>
+  <div id="favs"></div>
+  <h2>Märkte</h2>
+  <div id="markets"><p class="empty">Lädt …</p></div>
+  <p class="note">Rechtsklick (mobil: lange drücken) auf die Karte zeigt, was dort ist. Alle Daten stammen aus öffentlichen Quellen und können lückenhaft oder verzögert sein.</p>
+</aside>
+
+<section id="card" hidden aria-live="polite"></section>
+
+<footer class="ticker">
+  <strong>Gerade</strong>
+  <div id="tick"></div>
+</footer>
+<div id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/satellite.js@5.0.0/dist/satellite.min.js"></script>
+<script>
+{
+/* ---------- Einstellungen ---------- */
+const CFG = {
+  proxy: '',                       // Adresse des Flug-Proxys (proxy.php oder Cloudflare Worker); leer = ohne Flüge
+  caltrans: ['d3','d4','d7','d11','d12'], // Kalifornien-Bezirke für Verkehrskameras
+  flightZoom: 6                    // ab dieser Zoomstufe werden alle Flüge im Ausschnitt geladen
+};
+const CENT = {"AW":[12.5,-70,"Aruba"],"AF":[33,65,"Afghanistan"],"AO":[-12.5,18.5,"Angola"],"AI":[18.3,-63.2,"Anguilla"],"AX":[60.1,19.9,"Åland"],"AL":[41,20,"Albanien"],"AD":[42.5,1.5,"Andorra"],"AE":[24,54,"Vereinigte Arabische Emirate"],"AR":[-34,-64,"Argentinien"],"AM":[40,45,"Armenien"],"AS":[-14.3,-170,"Amerikanisch-Samoa"],"AQ":[-90,0,"Antarktis"],"TF":[-49.2,69.2,"Französische Süd- und Antarktisgebiete"],"AG":[17.1,-61.8,"Antigua und Barbuda"],"AU":[-27,133,"Australien"],"AT":[47.3,13.3,"Österreich"],"AZ":[40.5,47.5,"Aserbaidschan"],"BI":[-3.5,30,"Burundi"],"BE":[50.8,4,"Belgien"],"BJ":[9.5,2.3,"Benin"],"BF":[13,-2,"Burkina Faso"],"BD":[24,90,"Bangladesch"],"BG":[43,25,"Bulgarien"],"BH":[26,50.6,"Bahrain"],"BS":[24.3,-76,"Bahamas"],"BA":[44,18,"Bosnien und Herzegowina"],"BL":[18.5,-63.4,"Saint-Barthélemy"],"SH":[-15.9,-5.7,"St. Helena, Ascension und Tristan da Cunha"],"BY":[53,28,"Belarus"],"BZ":[17.3,-88.7,"Belize"],"BM":[32.3,-64.7,"Bermuda"],"BO":[-17,-65,"Bolivien"],"BQ":[12.2,-68.2,"Karibische Niederlande"],"BR":[-10,-55,"Brasilien"],"BB":[13.2,-59.5,"Barbados"],"BN":[4.5,114.7,"Brunei"],"BT":[27.5,90.5,"Bhutan"],"BV":[-54.4,3.4,"Bouvetinsel"],"BW":[-22,24,"Botswana"],"CF":[7,21,"Zentralafrikanische Republik"],"CA":[60,-95,"Kanada"],"CC":[-12.5,96.8,"Kokosinseln"],"CH":[47,8,"Schweiz"],"CL":[-30,-71,"Chile"],"CN":[35,105,"China"],"CI":[8,-5,"Côte d'Ivoire"],"CM":[6,12,"Kamerun"],"CD":[0,25,"Kongo (Dem. Rep.)"],"CG":[-1,15,"Kongo"],"CK":[-21.2,-159.8,"Cookinseln"],"CO":[4,-72,"Kolumbien"],"KM":[-12.2,44.3,"Komoren"],"CV":[16,-24,"Kap Verde"],"CR":[10,-84,"Costa Rica"],"CU":[21.5,-80,"Kuba"],"CW":[12.1,-68.9,"Curaçao"],"CX":[-10.5,105.7,"Weihnachtsinsel"],"KY":[19.5,-80.5,"Kaimaninseln"],"CY":[35,33,"Zypern"],"CZ":[49.8,15.5,"Tschechien"],"DE":[51,9,"Deutschland"],"DJ":[11.5,43,"Dschibuti"],"DM":[15.4,-61.3,"Dominica"],"DK":[56,10,"Dänemark"],"DO":[19,-70.7,"Dominikanische Republik"],"DZ":[28,3,"Algerien"],"EC":[-2,-77.5,"Ecuador"],"EG":[27,30,"Ägypten"],"ER":[15,39,"Eritrea"],"EH":[24.5,-13,"Westsahara"],"ES":[40,-4,"Spanien"],"EE":[59,26,"Estland"],"ET":[8,38,"Äthiopien"],"FI":[64,26,"Finnland"],"FJ":[-18,175,"Fidschi"],"FK":[-51.7,-59,"Falklandinseln"],"FR":[46,2,"Frankreich"],"FO":[62,-7,"Färöer-Inseln"],"FM":[6.9,158.3,"Mikronesien"],"GA":[-1,11.8,"Gabun"],"GB":[54,-2,"Vereinigtes Königreich"],"GE":[42,43.5,"Georgien"],"GG":[49.5,-2.6,"Guernsey"],"GH":[8,-2,"Ghana"],"GI":[36.1,-5.3,"Gibraltar"],"GN":[11,-10,"Guinea"],"GP":[16.3,-61.6,"Guadeloupe"],"GM":[13.5,-16.6,"Gambia"],"GW":[12,-15,"Guinea-Bissau"],"GQ":[2,10,"Äquatorialguinea"],"GR":[39,22,"Griechenland"],"GD":[12.1,-61.7,"Grenada"],"GL":[72,-40,"Grönland"],"GT":[15.5,-90.2,"Guatemala"],"GF":[4,-53,"Französisch-Guayana"],"GU":[13.5,144.8,"Guam"],"GY":[5,-59,"Guyana"],"HK":[22.3,114.2,"Hongkong"],"HM":[-53.1,72.5,"Heard und die McDonaldinseln"],"HN":[15,-86.5,"Honduras"],"HR":[45.2,15.5,"Kroatien"],"HT":[19,-72.4,"Haiti"],"HU":[47,20,"Ungarn"],"ID":[-5,120,"Indonesien"],"IM":[54.3,-4.5,"Insel Man"],"IN":[20,77,"Indien"],"IO":[-6,71.5,"Britisches Territorium im Indischen Ozean"],"IE":[53,-8,"Irland"],"IR":[32,53,"Iran"],"IQ":[33,44,"Irak"],"IS":[65,-18,"Island"],"IL":[31.5,35.1,"Israel"],"IT":[42.8,12.8,"Italien"],"JM":[18.3,-77.5,"Jamaika"],"JE":[49.3,-2.2,"Jersey"],"JO":[31,36,"Jordanien"],"JP":[36,138,"Japan"],"KZ":[48,68,"Kasachstan"],"KE":[1,38,"Kenia"],"KG":[41,75,"Kirgisistan"],"KH":[13,105,"Kambodscha"],"KI":[1.4,173,"Kiribati"],"KN":[17.3,-62.7,"St. Kitts und Nevis"],"KR":[37,127.5,"Südkorea"],"XK":[42.7,21.2,"Kosovo"],"KW":[29.5,45.8,"Kuwait"],"LA":[18,105,"Laos"],"LB":[33.8,35.8,"Libanon"],"LR":[6.5,-9.5,"Liberia"],"LY":[25,17,"Libyen"],"LC":[13.9,-61,"St. Lucia"],"LI":[47.3,9.5,"Liechtenstein"],"LK":[7,81,"Sri Lanka"],"LS":[-29.5,28.5,"Lesotho"],"LT":[56,24,"Litauen"],"LU":[49.8,6.2,"Luxemburg"],"LV":[57,25,"Lettland"],"MO":[22.2,113.6,"Macao"],"MF":[18.1,-63.9,"Saint-Martin"],"MA":[32,-5,"Marokko"],"MC":[43.7,7.4,"Monaco"],"MD":[47,29,"Moldawien"],"MG":[-20,47,"Madagaskar"],"MV":[3.3,73,"Malediven"],"MX":[23,-102,"Mexiko"],"MH":[9,168,"Marshallinseln"],"MK":[41.8,22,"Nordmazedonien"],"ML":[17,-4,"Mali"],"MT":[35.8,14.6,"Malta"],"MM":[22,98,"Myanmar"],"ME":[42.5,19.3,"Montenegro"],"MN":[46,105,"Mongolei"],"MP":[15.2,145.8,"Nördliche Marianen"],"MZ":[-18.2,35,"Mosambik"],"MR":[20,-12,"Mauretanien"],"MS":[16.8,-62.2,"Montserrat"],"MQ":[14.7,-61,"Martinique"],"MU":[-20.3,57.6,"Mauritius"],"MW":[-13.5,34,"Malawi"],"MY":[2.5,112.5,"Malaysia"],"YT":[-12.8,45.2,"Mayotte"],"NA":[-22,17,"Namibia"],"NC":[-21.5,165.5,"Neukaledonien"],"NE":[16,8,"Niger"],"NF":[-29,168,"Norfolkinsel"],"NG":[10,8,"Nigeria"],"NI":[13,-85,"Nicaragua"],"NU":[-19,-169.9,"Niue"],"NL":[52.5,5.8,"Niederlande"],"NO":[62,10,"Norwegen"],"NP":[28,84,"Nepal"],"NR":[-0.5,166.9,"Nauru"],"NZ":[-41,174,"Neuseeland"],"OM":[21,57,"Oman"],"PK":[30,70,"Pakistan"],"PA":[9,-80,"Panama"],"PN":[-25.1,-130.1,"Pitcairninseln"],"PE":[-10,-76,"Peru"],"PH":[13,122,"Philippinen"],"PW":[7.5,134.5,"Palau"],"PG":[-6,147,"Papua-Neuguinea"],"PL":[52,20,"Polen"],"PR":[18.3,-66.5,"Puerto Rico"],"KP":[40,127,"Nordkorea"],"PT":[39.5,-8,"Portugal"],"PY":[-23,-58,"Paraguay"],"PS":[31.9,35.2,"Palästina"],"PF":[-15,-140,"Französisch-Polynesien"],"QA":[25.5,51.3,"Katar"],"RE":[-21.1,55.5,"Réunion"],"RO":[46,25,"Rumänien"],"RU":[60,100,"Russland"],"RW":[-2,30,"Ruanda"],"SA":[25,45,"Saudi-Arabien"],"SD":[15,30,"Sudan"],"SN":[14,-14,"Senegal"],"SG":[1.4,103.8,"Singapur"],"GS":[-54.5,-37,"Südgeorgien und die Südlichen Sandwichinseln"],"SJ":[78,20,"Spitzbergen und Jan Mayen"],"SB":[-8,159,"Salomonen"],"SL":[8.5,-11.5,"Sierra Leone"],"SV":[13.8,-88.9,"El Salvador"],"SM":[43.8,12.4,"San Marino"],"SO":[10,49,"Somalia"],"PM":[46.8,-56.3,"St. Pierre und Miquelon"],"RS":[44,21,"Serbien"],"SS":[7,30,"Südsudan"],"ST":[1,7,"São Tomé und Príncipe"],"SR":[4,-56,"Suriname"],"SK":[48.7,19.5,"Slowakei"],"SI":[46.1,14.8,"Slowenien"],"SE":[62,15,"Schweden"],"SZ":[-26.5,31.5,"Swasiland"],"SX":[18,-63,"Sint Maarten"],"SC":[-4.6,55.7,"Seychellen"],"SY":[35,38,"Syrien"],"TC":[21.8,-71.6,"Turks-und Caicosinseln"],"TD":[15,19,"Tschad"],"TG":[8,1.2,"Togo"],"TH":[15,100,"Thailand"],"TJ":[39,71,"Tadschikistan"],"TK":[-9,-172,"Tokelau"],"TM":[40,60,"Turkmenistan"],"TL":[-8.8,125.9,"Osttimor"],"TO":[-20,-175,"Tonga"],"TT":[11,-61,"Trinidad und Tobago"],"TN":[34,9,"Tunesien"],"TR":[39,35,"Türkei"],"TV":[-8,178,"Tuvalu"],"TW":[23.5,121,"Taiwan"],"TZ":[-6,35,"Tansania"],"UG":[1,32,"Uganda"],"UA":[49,32,"Ukraine"],"UM":[19.3,166.6,"Kleinere Inselbesitzungen der Vereinigten Staaten"],"UY":[-33,-56,"Uruguay"],"US":[38,-97,"Vereinigte Staaten"],"UZ":[41,64,"Usbekistan"],"VA":[41.9,12.5,"Vatikanstadt"],"VC":[13.3,-61.2,"St. Vincent und die Grenadinen"],"VE":[8,-66,"Venezuela"],"VG":[18.4,-64.6,"Britische Jungferninseln"],"VI":[18.4,-64.9,"Amerikanische Jungferninseln"],"VN":[16.2,107.8,"Vietnam"],"VU":[-16,167,"Vanuatu"],"WF":[-13.3,-176.2,"Wallis und Futuna"],"WS":[-13.6,-172.3,"Samoa"],"YE":[15,48,"Jemen"],"ZA":[-29,24,"Südafrika"],"ZM":[-15,30,"Sambia"],"ZW":[-20,30,"Simbabwe"]};
+
+/* ---------- Helfer ---------- */
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = new Intl.NumberFormat('de-DE');
+const n1 = v => new Intl.NumberFormat('de-DE',{maximumFractionDigits:1}).format(v);
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem('okular.'+k); return v ? JSON.parse(v) : d }catch(e){ return d } },
+  set(k, v){ try{ localStorage.setItem('okular.'+k, JSON.stringify(v)) }catch(e){} }
+};
+const ago = t => { const s = Math.round((Date.now()-t)/1000); if (s < 60) return 'gerade eben'; if (s < 3600) return 'vor '+Math.round(s/60)+' Min.'; if (s < 86400) return 'vor '+Math.round(s/3600)+' Std.'; return 'vor '+Math.round(s/86400)+' Tg.'; };
+const hhmm = t => new Date(t).toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+const toast = m => { const t = $('#toast'); t.textContent = m; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 2600); };
+async function getJSON(url, opt = {}){
+  const ctl = new AbortController(); const to = setTimeout(() => ctl.abort(), opt.timeout || 25000);
+  try{
+    const r = await fetch(url, {signal: ctl.signal});
+    if (!r.ok) throw new Error('HTTP '+r.status);
+    return opt.text ? await r.text() : await r.json();
+  } finally { clearTimeout(to) }
+}
+async function viaProxy(url){
+  if (!CFG.proxy) { const e = new Error('kein Proxy eingerichtet'); e.proxy = true; throw e; }
+  try { return await getJSON(CFG.proxy + '?u=' + encodeURIComponent(url), {timeout: 20000}); }
+  catch(err){ const e = new Error('Proxy nicht erreichbar'); e.proxy = true; throw e; }
+}
+const dist = (a, b, c, d) => { const R = 6371, r = Math.PI/180, x = (d-b)*r*Math.cos((a+c)/2*r), y = (c-a)*r; return Math.sqrt(x*x+y*y)*R; };
+
+/* ---------- Karte ---------- */
+const view = store.get('view', {c:[35,15], z:3});
+const map = L.map('map', {preferCanvas:true, worldCopyJump:true, zoomControl:false, minZoom:2}).setView(view.c, view.z);
+map.attributionControl.setPrefix('<a href="https://leafletjs.com">Leaflet</a>');
+L.control.zoom({position:'bottomright'}).addTo(map);
+const cv = L.canvas({padding:.4});
+const esri = (svc, o = {}) => L.tileLayer('https://services.arcgisonline.com/arcgis/rest/services/' + svc + '/MapServer/tile/{z}/{y}/{x}', Object.assign({maxZoom:19, maxNativeZoom:16, attribution:'Karte © Esri, HERE, Garmin, OpenStreetMap-Mitwirkende'}, o));
+const BASES = {
+  dark:  L.layerGroup([esri('Canvas/World_Dark_Gray_Base'), esri('Canvas/World_Dark_Gray_Reference', {attribution:''})]),
+  sat:   L.layerGroup([esri('World_Imagery', {maxNativeZoom:18, attribution:'Bilder © Esri, Maxar, Earthstar Geographics'}), esri('Reference/World_Boundaries_and_Places', {attribution:''})]),
+  light: L.layerGroup([esri('Canvas/World_Light_Gray_Base'), esri('Canvas/World_Light_Gray_Reference', {attribution:''})])
+};
+let base = store.get('base', 'dark');
+function setBase(b){
+  Object.values(BASES).forEach(l => map.removeLayer(l));
+  (BASES[b] || BASES.dark).addTo(map); base = b; store.set('base', b);
+  document.querySelectorAll('#bases button').forEach(x => x.setAttribute('aria-pressed', x.dataset.b === b));
+}
+document.querySelectorAll('#bases button').forEach(x => x.addEventListener('click', () => setBase(x.dataset.b)));
+setBase(base);
+map.on('moveend', () => store.set('view', {c:[map.getCenter().lat, map.getCenter().lng], z:map.getZoom()}));
+
+/* ---------- Ebenen ---------- */
+const saved = store.get('layers', {});
+const L_ = (id, name, color, src, every, on) => ({id, name, color, src, every, on: saved[id] ?? on, group: L.layerGroup(), items: [], status:'off', count:0, t:0});
+const LAYERS = [
+  L_('cams',   'Webcams',              '#d6127e', 'Digitraffic (FI) · Caltrans (US-CA)', 0,    true),
+  L_('flights','Flüge im Ausschnitt',  '#eef2ee', 'adsb.lol über Proxy',                30,   true),
+  L_('mil',    'Militärflüge weltweit','#ff5a5f', 'adsb.lol über Proxy',                60,   true),
+  L_('ships',  'Schiffe Ostsee',       '#4fb6d8', 'Digitraffic AIS',                     60,   true),
+  L_('quakes', 'Erdbeben 24 h',        '#f0b43c', 'USGS',                                300,  true),
+  L_('events', 'Naturereignisse',      '#ff8a3d', 'NASA EONET',                          900,  true),
+  L_('alerts', 'Katastrophenwarnungen','#c77dff', 'GDACS (UN/EU)',                       900,  true),
+  L_('net',    'Internet-Störungen',   '#ff5a5f', 'IODA (Georgia Tech)',                 600,  true),
+  L_('sats',   'Satelliten & ISS',     '#ffffff', 'CelesTrak',                           7200, true),
+  L_('choke',  'Meerengen',            '#5fd39a', 'eigene Übersicht',                    0,    true)
+];
+const byId = Object.fromEntries(LAYERS.map(l => [l.id, l]));
+const STATUS = {off:'aus', load:'lädt …', ok:'', err:'Quelle nicht erreichbar', proxy:'Flug-Proxy nicht eingerichtet', zoom:'ab Zoom '+CFG.flightZoom+' sichtbar'};
+
+function renderLayers(){
+  $('#layers').innerHTML = LAYERS.map(l => `
+    <label class="layer" style="--c:${l.color}">
+      <input type="checkbox" data-id="${l.id}" ${l.on ? 'checked' : ''}><span class="sw"></span>
+      <span>${esc(l.name)}</span><span class="n">${l.on && l.count ? fmt.format(l.count) : ''}</span>
+      <span class="s"><i class="dot ${l.on ? l.status : ''}"></i>${esc(l.on ? (STATUS[l.status] || (l.t ? 'aktualisiert ' + ago(l.t) : '')) : 'aus')} · ${esc(l.src)}</span>
+    </label>`).join('');
+  const s = k => byId[k].on ? byId[k].count : 0;
+  $('#stats').innerHTML = [
+    ['Kameras', s('cams')], ['Flüge', s('flights') + s('mil')], ['Schiffe', s('ships')],
+    ['Ereignisse', s('quakes') + s('events') + s('alerts')]
+  ].map(([k, v]) => `<div><b>${fmt.format(v)}</b><span>${k}</span></div>`).join('');
+}
+$('#layers').addEventListener('change', e => {
+  const l = byId[e.target.dataset.id]; if (!l) return;
+  l.on = e.target.checked; store.set('layers', Object.fromEntries(LAYERS.map(x => [x.id, x.on])));
+  if (l.on){ l.group.addTo(map); run(l); } else { map.removeLayer(l.group); l.status = 'off'; }
+  renderLayers();
+});
+
+async function run(l){
+  if (!l.on || l.busy) return;
+  l.busy = true; l.status = 'load'; renderLayers();
+  try { const r = await LOAD[l.id](l); l.status = r === 'zoom' ? 'zoom' : 'ok'; l.t = Date.now(); }
+  catch(e){ l.status = e.proxy ? 'proxy' : 'err'; console.warn('[OKULAR]', l.id, e); }
+  l.busy = false; renderLayers(); renderTicker();
+}
+
+/* ---------- Detailkarte ---------- */
+let cardTimer = null;
+function card(kind, color, title, body, onOpen){
+  clearInterval(cardTimer);
+  const c = $('#card'); c.hidden = false;
+  if (innerWidth <= 800){ document.body.classList.remove('panel-open'); $('#togglePanel').setAttribute('aria-expanded', false); } c.style.setProperty('--c', color);
+  c.innerHTML = `<button class="x" type="button" aria-label="Schließen">×</button><div class="kind">${esc(kind)}</div><h3>${esc(title)}</h3>${body}`;
+  c.querySelector('.x').onclick = closeCard;
+  onOpen && onOpen(c);
+}
+function closeCard(){ clearInterval(cardTimer); $('#card').hidden = true; }
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCard(); });
+const rows = list => list.filter(r => r[1] !== '' && r[1] != null).map(([k, v]) => `<div class="row"><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('');
+const link = (href, t) => `<a href="${esc(href)}" target="_blank" rel="noopener">${esc(t)}</a>`;
+
+function dotMarker(lat, lon, color, r, item, l, opts = {}){
+  const m = L.circleMarker([lat, lon], Object.assign({renderer:cv, radius:r, color:'#0d1c24', weight:1, fillColor:color, fillOpacity:.9}, opts));
+  m.on('click', () => item.open());
+  item.lat = lat; item.lon = lon; l.items.push(item); l.group.addLayer(m);
+  return m;
+}
+
+/* ---------- Webcams ---------- */
+let favs = store.get('favs', []);
+function camCard(item){
+  const imgs = item.imgs; let i = 0;
+  const isFav = () => favs.some(f => f.id === item.id);
+  card('Webcam · ' + item.src, '#d6127e', item.name, `
+    <div class="img"><span>Bild lädt …</span><img alt="Kamerabild ${esc(item.name)}"><em></em></div>
+    <div class="btns" id="presets">${imgs.length > 1 ? imgs.map((_, k) => `<button type="button" data-k="${k}" aria-pressed="${k === 0}">Blick ${k + 1}</button>`).join('') : ''}</div>
+    ${rows([['Ort', item.place || ''], ['Quelle', item.src], ['Aktualisierung', item.freq]])}
+    <div class="btns"><button type="button" id="fav"></button><button type="button" id="reload">Neu laden</button>${item.video ? link(item.video, 'Videostream') : ''}</div>`,
+    c => {
+      const img = c.querySelector('img'), em = c.querySelector('em'), sp = c.querySelector('.img span');
+      const load = () => { img.style.opacity = 0; img.src = imgs[i] + (imgs[i].includes('?') ? '&' : '?') + 't=' + Date.now(); };
+      img.onload = () => { img.style.opacity = 1; em.textContent = 'geladen ' + hhmm(Date.now()); };
+      img.onerror = () => { sp.textContent = 'Bild gerade nicht verfügbar'; em.textContent = ''; };
+      const favBtn = c.querySelector('#fav');
+      const paint = () => { favBtn.textContent = isFav() ? '★ Gemerkt' : '☆ Merken'; favBtn.setAttribute('aria-pressed', isFav()); };
+      favBtn.onclick = () => {
+        favs = isFav() ? favs.filter(f => f.id !== item.id) : [...favs, {id:item.id, name:item.name, img:imgs[0], lat:item.lat, lon:item.lon}];
+        store.set('favs', favs); paint(); renderFavs();
+      };
+      c.querySelector('#reload').onclick = load;
+      c.querySelectorAll('#presets button').forEach(b => b.onclick = () => {
+        i = +b.dataset.k; c.querySelectorAll('#presets button').forEach(x => x.setAttribute('aria-pressed', x === b)); load();
+      });
+      paint(); load(); cardTimer = setInterval(load, 60000);
+    });
+}
+function renderFavs(){
+  $('#favs').innerHTML = favs.length ? favs.map((f, k) => `<button type="button" data-k="${k}"><img alt="" src="${esc(f.img)}?t=${Math.floor(Date.now()/60000)}" loading="lazy"><span>${esc(f.name)}</span></button>`).join('')
+    : '<p class="empty">Noch keine. Öffne eine Kamera und tippe auf „Merken“.</p>';
+}
+$('#favs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const f = favs[+b.dataset.k]; map.flyTo([f.lat, f.lon], 12);
+  const it = byId.cams.items.find(x => x.id === f.id); if (it) it.open();
+});
+
+/* ---------- Flugzeuge ---------- */
+const planeSVG = '<svg viewBox="0 0 24 24"><path fill="currentColor" stroke="#0d1c24" stroke-width=".8" d="M12 1.5c.8 0 1.3.9 1.3 2v5.6l8.2 4.6v2.1l-8.2-2.5v4.9l2.4 1.8v1.7L12 20.8l-3.7.9V20l2.4-1.8v-4.9l-8.2 2.5v-2.1l8.2-4.6V3.5c0-1.1.5-2 1.3-2z"/></svg>';
+function planeIcon(track, color, size){
+  return L.divIcon({className:'plane', html:`<div style="--c:${color};color:${color};width:${size}px;height:${size}px;transform:rotate(${track || 0}deg)">${planeSVG}</div>`, iconSize:[size, size]});
+}
+function addPlanes(l, list, color, size, mil){
+  l.group.clearLayers(); l.items = [];
+  for (const a of list){
+    if (a.lat == null || a.lon == null) continue;
+    const name = (a.flight || '').trim() || a.r || a.hex;
+    const item = {id:a.hex, name, kind: mil ? 'Militärflug' : 'Flug', lat:a.lat, lon:a.lon, open: () => card(mil ? 'Militärflug' : 'Flug', color, name, `
+      ${rows([['Kennung', a.r || ''], ['Typ', a.desc || a.t || ''], ['Betreiber', a.ownOp || ''], ['Höhe', a.alt_baro === 'ground' ? 'am Boden' : a.alt_baro != null ? fmt.format(Math.round(a.alt_baro * .3048)) + ' m' : ''],
+        ['Geschwindigkeit', a.gs != null ? fmt.format(Math.round(a.gs * 1.852)) + ' km/h' : ''], ['Kurs', a.track != null ? Math.round(a.track) + '°' : ''], ['Squawk', a.squawk || ''], ['ICAO-Hex', a.hex]])}
+      <div class="btns">${link('https://globe.adsb.lol/?icao=' + a.hex, 'Auf globe.adsb.lol verfolgen')}</div>`)};
+    const m = L.marker([a.lat, a.lon], {icon: planeIcon(a.track, color, size), keyboard:false}).on('click', item.open);
+    l.items.push(item); l.group.addLayer(m);
+  }
+  l.count = l.items.length;
+}
+const ADSB = ['https://api.adsb.lol', 'https://api.airplanes.live'];
+async function adsb(path){
+  let last; for (const h of ADSB){ try { return await viaProxy(h + path); } catch(e){ last = e; } } throw last;
+}
+
+/* ---------- Schiffe ---------- */
+let vesselMeta = {}, vesselMetaT = 0;
+const shipType = t => t >= 60 && t < 70 ? ['Passagierschiff', '#7fd3ff'] : t >= 70 && t < 80 ? ['Frachtschiff', '#5fd39a'] : t >= 80 && t < 90 ? ['Tanker', '#ff9f43'] : t === 30 ? ['Fischerei', '#e8d36a'] : t === 52 || t === 31 || t === 32 ? ['Schlepper', '#c0c7cc'] : t >= 40 && t < 50 ? ['Schnellfähre', '#7fd3ff'] : t === 35 ? ['Marine', '#ff5a5f'] : t === 36 || t === 37 ? ['Freizeit', '#d7b4ff'] : ['Sonstiges', '#9fb3bb'];
+const NAV = ['in Fahrt (Motor)', 'vor Anker', 'manövrierunfähig', 'eingeschränkt manövrierfähig', 'tiefgangbehindert', 'festgemacht', 'auf Grund', 'beim Fischen', 'in Fahrt (Segel)'];
+
+/* ---------- Meerengen ---------- */
+const CHOKE = [
+  ['Straße von Hormus', 26.57, 56.25, 'Einziger Seeweg aus dem Persischen Golf. Hier läuft rund ein Fünftel des weltweit verbrauchten Öls durch, dazu viel Flüssiggas aus Katar.'],
+  ['Bab al-Mandab', 12.6, 43.3, 'Südtor des Roten Meeres zwischen Jemen und Dschibuti. Wer hier nicht durchkommt, muss um das Kap der Guten Hoffnung.'],
+  ['Suezkanal', 30.6, 32.33, 'Kürzeste Verbindung Asien–Europa. Sperrungen wie 2021 (Ever Given) stauen den Welthandel binnen Tagen.'],
+  ['Panamakanal', 9.08, -79.68, 'Verbindet Atlantik und Pazifik. Bei Dürre sinken die Wasserstände der Schleusenseen und damit die Durchfahrten.'],
+  ['Straße von Malakka', 2.5, 101.4, 'Hauptroute zwischen Indischem Ozean und Pazifik, gemessen an Öltransporten einer der größten Engpässe der Welt.'],
+  ['Taiwanstraße', 24.3, 119.6, 'Zentrale Route für Containerschiffe zwischen Nordost- und Südostasien.'],
+  ['Bosporus', 41.12, 29.06, 'Einziger Zugang zum Schwarzen Meer, mitten durch Istanbul. Wichtig für Getreide und Öl aus der Region.'],
+  ['Straße von Gibraltar', 35.96, -5.5, 'Tor zwischen Atlantik und Mittelmeer, eine der meistbefahrenen Meerengen.'],
+  ['Ärmelkanal / Straße von Dover', 51.0, 1.45, 'Verkehrsreichste Schifffahrtsstraße Europas mit Verkehrstrennungsgebiet.'],
+  ['Dänische Meerengen', 55.6, 11.0, 'Großer Belt, Öresund und Fehmarnbelt: der Zugang zur Ostsee. Live-Zählung aus AIS, soweit abgedeckt.'],
+  ['Finnischer Meerbusen', 59.9, 26.5, 'Zufahrt nach St. Petersburg, Helsinki und Tallinn. Gut von AIS abgedeckt, daher mit Live-Zählung.']
+];
+
+/* ---------- Satelliten ---------- */
+let sats = [], issTrack = null;
+function satPos(s, d){
+  const pv = satellite.propagate(s.rec, d); if (!pv.position) return null;
+  const g = satellite.eciToGeodetic(pv.position, satellite.gstime(d));
+  const v = pv.velocity; return {lat: satellite.degreesLat(g.latitude), lon: satellite.degreesLong(g.longitude), h: g.height, v: Math.hypot(v.x, v.y, v.z)};
+}
+function drawSats(){
+  const l = byId.sats; if (!l.on || !sats.length || !window.satellite) return;
+  const now = new Date();
+  for (const s of sats){
+    const p = satPos(s, now); if (!p) continue; s.p = p;
+    if (!s.m){
+      const iss = /ISS \(ZARYA\)/.test(s.name);
+      s.m = L.marker([p.lat, p.lon], {icon: L.divIcon({className:'', html: iss ? '<div class="iss">ISS</div>' : '<div class="sat"></div>', iconSize: iss ? [22, 22] : [8, 8]}), keyboard:false, zIndexOffset: iss ? 1000 : 0})
+        .on('click', () => s.open());
+      s.open = () => card('Satellit', '#ffffff', s.name, rows([['Höhe', fmt.format(Math.round(s.p.h)) + ' km'], ['Geschwindigkeit', n1(s.p.v) + ' km/s'], ['Position', n1(s.p.lat) + '°, ' + n1(s.p.lon) + '°'], ['NORAD-Nr.', s.id]]) + `<div class="btns">${link('https://www.n2yo.com/satellite/?s=' + s.id, 'Bahn auf N2YO')}</div>`);
+      l.group.addLayer(s.m); s.item = {id:s.id, name:s.name, kind:'Satellit', open:() => s.open()}; l.items.push(s.item);
+    } else s.m.setLatLng([p.lat, p.lon]);
+    s.item.lat = p.lat; s.item.lon = p.lon;
+  }
+  const iss = sats.find(s => /ISS \(ZARYA\)/.test(s.name));
+  if (iss && (!issTrack || now - issTrack.t > 60000)){
+    const segs = [[]]; let prev = null;
+    for (let k = 0; k <= 95; k += 1){
+      const p = satPos(iss, new Date(+now + k * 60000)); if (!p) continue;
+      if (prev != null && Math.abs(p.lon - prev) > 180) segs.push([]);
+      segs[segs.length - 1].push([p.lat, p.lon]); prev = p.lon;
+    }
+    if (issTrack) l.group.removeLayer(issTrack.line);
+    issTrack = {t: +now, line: L.polyline(segs, {color:'#ffffff', weight:1.5, opacity:.55, dashArray:'4 6', interactive:false})};
+    l.group.addLayer(issTrack.line);
+  }
+}
+setInterval(drawSats, 3000);
+
+/* ---------- Lader je Ebene ---------- */
+const LOAD = {
+  async cams(l){
+    const out = [];
+    const fi = getJSON('https://tie.digitraffic.fi/api/weathercam/v1/stations').then(j => {
+      for (const f of j.features){
+        const p = f.properties, [lon, lat] = f.geometry.coordinates; const pr = (p.presets || []).filter(x => x.inCollection !== false);
+        if (!pr.length || p.collectionStatus === 'REMOVED_TEMPORARILY') continue;
+        out.push({id:'fi-' + p.id, name: p.name.replace(/^[a-z]+\d+_/i, '').replace(/_/g, ' '), place:'Finnland', src:'Digitraffic', freq:'ca. alle 10 Min.', lat, lon, imgs: pr.map(x => 'https://weathercam.digitraffic.fi/' + x.id + '.jpg')});
+      }
+    });
+    const ca = CFG.caltrans.map(d => getJSON(`https://cwwp2.dot.ca.gov/data/${d}/cctv/cctvStatusD${d.slice(1).padStart(2, '0')}.json`).then(j => {
+      for (const x of j.data){
+        const c = x.cctv, loc = c.location, img = c.imageData?.static?.currentImageURL;
+        if (c.inService !== 'true' || !img) continue;
+        out.push({id:'ca-' + loc.district + '-' + c.index, name: loc.locationName, place: [loc.nearbyPlace, loc.county, 'Kalifornien'].filter(Boolean).join(', '), src:'Caltrans', freq: (c.imageData.static.currentImageUpdateFrequency || '?') + ' Min.', lat:+loc.latitude, lon:+loc.longitude, imgs:[img], video: c.imageData.streamingVideoURL || ''});
+      }
+    }));
+    const res = await Promise.allSettled([fi, ...ca]);
+    if (!out.length) throw new Error('keine Kameras geladen');
+    l.group.clearLayers(); l.items = [];
+    for (const it of out){ if (!isFinite(it.lat) || !isFinite(it.lon)) continue; it.kind = 'Webcam'; it.open = () => camCard(it); dotMarker(it.lat, it.lon, '#d6127e', 4, it, l); }
+    l.count = l.items.length;
+    if (res.some(r => r.status === 'rejected')) console.warn('[OKULAR] einige Kameraquellen fehlen');
+  },
+  async flights(l){
+    if (map.getZoom() < CFG.flightZoom){ l.group.clearLayers(); l.items = []; l.count = 0; return 'zoom'; }
+    const c = map.getCenter(), b = map.getBounds();
+    const r = Math.min(250, Math.ceil(dist(c.lat, c.lng, b.getNorth(), b.getEast()) / 1.852));
+    const j = await adsb(`/v2/point/${c.lat.toFixed(3)}/${c.lng.toFixed(3)}/${r}`);
+    const mil = new Set(byId.mil.items.map(x => x.id));
+    addPlanes(l, (j.ac || []).filter(a => !mil.has(a.hex)), '#eef2ee', 18, false);
+  },
+  async mil(l){
+    const j = await adsb('/v2/mil');
+    addPlanes(l, j.ac || [], '#ff5a5f', 20, true);
+  },
+  async ships(l){
+    if (Date.now() - vesselMetaT > 1800e3){
+      try { const v = await getJSON('https://meri.digitraffic.fi/api/ais/v1/vessels'); vesselMeta = Object.fromEntries(v.map(x => [x.mmsi, x])); vesselMetaT = Date.now(); } catch(e){}
+    }
+    const j = await getJSON('https://meri.digitraffic.fi/api/ais/v1/locations?from=' + (Date.now() - 3600e3));
+    l.group.clearLayers(); l.items = [];
+    for (const f of j.features){
+      const p = f.properties, [lon, lat] = f.geometry.coordinates, m = vesselMeta[p.mmsi] || {};
+      const [tn, col] = shipType(m.shipType); const name = (m.name || '').trim() || 'MMSI ' + p.mmsi;
+      const it = {id:'s' + p.mmsi, name, kind:'Schiff', sog:p.sog, open: () => card('Schiff · ' + tn, col, name, rows([
+        ['Typ', tn], ['Ziel', (m.destination || '').trim()], ['Fahrt', p.sog != null ? n1(p.sog) + ' kn' : ''], ['Kurs', p.cog != null ? Math.round(p.cog) + '°' : ''],
+        ['Status', NAV[p.navStat] || ''], ['Tiefgang', m.draught ? n1(m.draught / 10) + ' m' : ''], ['Rufzeichen', m.callSign || ''], ['MMSI', p.mmsi], ['IMO', m.imo || ''], ['Letzte Meldung', ago(p.timestampExternal)]]) +
+        `<div class="btns">${link('https://www.marinetraffic.com/en/ais/details/ships/mmsi:' + p.mmsi, 'Bei MarineTraffic ansehen')}</div>`)};
+      dotMarker(lat, lon, col, p.sog > 1 ? 4 : 3, it, l);
+    }
+    l.count = l.items.length;
+    if (byId.choke.on) LOAD.choke(byId.choke);
+  },
+  async quakes(l){
+    const j = await getJSON('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson');
+    l.group.clearLayers(); l.items = [];
+    for (const f of j.features.sort((a, b) => a.properties.mag - b.properties.mag)){
+      const p = f.properties, [lon, lat, depth] = f.geometry.coordinates;
+      const it = {id:f.id, name:'M ' + n1(p.mag) + ' · ' + (p.place || ''), kind:'Erdbeben', t:p.time, mag:p.mag, open: () => card('Erdbeben', '#f0b43c', 'Magnitude ' + n1(p.mag), rows([
+        ['Ort', p.place || ''], ['Zeit', new Date(p.time).toLocaleString('de-DE') + ' (' + ago(p.time) + ')'], ['Tiefe', n1(depth) + ' km'], ['Tsunami-Hinweis', p.tsunami ? 'ja' : 'nein'], ['Spürbar gemeldet', p.felt ? fmt.format(p.felt) + '×' : '']]) +
+        `<div class="btns">${link(p.url, 'Bericht bei USGS')}</div>`)};
+      dotMarker(lat, lon, '#f0b43c', 3 + Math.max(0, p.mag - 2.5) * 3, it, l, {fillOpacity:.55, color:'#f0b43c', weight:1});
+    }
+    l.count = l.items.length;
+  },
+  async events(l){
+    const j = await getJSON('https://eonet.gsfc.nasa.gov/api/v3/events?status=open&days=30');
+    const CAT = {wildfires:['Waldbrand', '#ff8a3d'], severeStorms:['Sturm', '#7fd3ff'], volcanoes:['Vulkan', '#ff5a5f'], seaLakeIce:['Eisberg', '#e6f7ff'], floods:['Flut', '#4f8fd8'], earthquakes:['Erdbeben', '#f0b43c'], landslides:['Erdrutsch', '#b07a4a'], snow:['Schnee', '#ffffff'], dustHaze:['Staub', '#d8c08a'], drought:['Dürre', '#c9a227'], tempExtremes:['Hitze/Kälte', '#ff6b9d'], manmade:['Menschgemacht', '#9fb3bb'], waterColor:['Wasserfärbung', '#5fd39a']};
+    l.group.clearLayers(); l.items = [];
+    for (const e of j.events){
+      const g = e.geometry[e.geometry.length - 1]; if (!g) continue;
+      let [lon, lat] = g.type === 'Point' ? g.coordinates : g.coordinates[0][0];
+      const [cat, col] = CAT[e.categories[0]?.id] || ['Ereignis', '#ff8a3d'];
+      const t = Date.parse(g.date);
+      const it = {id:e.id, name:e.title, kind:cat, t, open: () => card('Naturereignis · ' + cat, col, e.title, rows([['Kategorie', cat], ['Letzte Beobachtung', new Date(t).toLocaleString('de-DE')], ['Stärke', g.magnitudeValue ? fmt.format(g.magnitudeValue) + ' ' + (g.magnitudeUnit || '') : ''], ['Beobachtungen', e.geometry.length]]) +
+        `<div class="btns">${(e.sources || []).slice(0, 2).map(s => link(s.url, 'Quelle: ' + s.id)).join('')}</div>`)};
+      if (e.geometry.length > 1 && e.categories[0]?.id === 'severeStorms') l.group.addLayer(L.polyline(e.geometry.filter(x => x.type === 'Point').map(x => [x.coordinates[1], x.coordinates[0]]), {color:col, weight:1.5, opacity:.6, interactive:false}));
+      dotMarker(lat, lon, col, 6, it, l, {color:'#0d1c24', weight:2});
+    }
+    l.count = l.items.length;
+  },
+  async alerts(l){
+    const from = new Date(Date.now() - 14 * 864e5).toISOString().slice(0, 10);
+    const j = await getJSON('https://www.gdacs.org/gdacsapi/api/events/geteventlist/SEARCH?eventlist=EQ;TC;FL;VO;DR;WF&alertlevel=Orange;Red&fromdate=' + from);
+    const T = {EQ:'Erdbeben', TC:'Tropensturm', FL:'Überschwemmung', VO:'Vulkan', DR:'Dürre', WF:'Waldbrand'};
+    l.group.clearLayers(); l.items = [];
+    for (const f of j.features || []){
+      const p = f.properties, [lon, lat] = f.geometry.coordinates, red = p.alertlevel === 'Red', col = red ? '#ff3b5c' : '#c77dff';
+      const t = Date.parse(p.todate || p.fromdate);
+      const it = {id:'g' + p.eventid, name:(T[p.eventtype] || p.eventtype) + ' · ' + (p.country || p.name), kind:'Warnung', t, red, open: () => card('GDACS-Warnung · ' + (red ? 'Rot' : 'Orange'), col, (T[p.eventtype] || 'Ereignis') + (p.country ? ' – ' + p.country : ''), `<p class="note">${esc((p.htmldescription || p.description || '').replace(/<[^>]+>/g, ' ').slice(0, 260))}</p>` + rows([
+        ['Warnstufe', red ? 'Rot (schwer)' : 'Orange (mittel)'], ['Beginn', new Date(Date.parse(p.fromdate)).toLocaleDateString('de-DE')], ['Stand', new Date(t).toLocaleDateString('de-DE')], ['Schwere', p.severitydata?.severitytext || '']]) +
+        `<div class="btns">${p.url?.report ? link(p.url.report, 'Lagebericht bei GDACS') : ''}</div>`)};
+      dotMarker(lat, lon, col, red ? 10 : 8, it, l, {fillOpacity:.35, color:col, weight:2});
+    }
+    l.count = l.items.length;
+  },
+  async net(l){
+    const now = Math.floor(Date.now() / 1000);
+    const j = await getJSON(`https://api.ioda.inetintel.cc.gatech.edu/v2/outages/alerts?from=${now - 86400}&until=${now}&entityType=country&limit=2000`);
+    const SRC = {bgp:'BGP-Routing', 'ping-slash24':'Erreichbarkeit (Ping)', 'merit-nt':'Netzwerk-Teleskop', gtr:'Google-Verkehr', 'gtr-norm':'Google-Verkehr'};
+    const last = {};
+    for (const a of j.data || []){
+      if (a.entity?.type !== 'country') continue;
+      const k = a.entity.code + '|' + a.datasource;
+      if (!last[k] || a.time > last[k].time) last[k] = a;
+    }
+    const by = {};
+    for (const a of Object.values(last)){
+      if (a.level !== 'critical' && a.level !== 'warning') continue;
+      const c = a.entity.code; (by[c] ||= {code:c, name:a.entity.name, t:0, src:[]});
+      by[c].t = Math.max(by[c].t, a.time * 1000); by[c].src.push((SRC[a.datasource] || a.datasource) + ' ' + Math.round(100 * a.value / Math.max(1, a.historyValue)) + ' %');
+    }
+    l.group.clearLayers(); l.items = [];
+    for (const o of Object.values(by)){
+      const c = CENT[o.code]; if (!c) continue;
+      const name = c[2] || o.name;
+      const it = {id:'n' + o.code, name:'Internet gestört · ' + name, kind:'Internet', t:o.t, open: () => card('Internet-Störung', '#ff5a5f', name, rows([['Erkannt', new Date(o.t).toLocaleString('de-DE') + ' (' + ago(o.t) + ')'], ...o.src.map(s => ['Messwert', s])]) +
+        '<p class="note">Prozent = aktueller Wert gegenüber dem üblichen Niveau. Einzelne Ausreißer können auch Messfehler sein.</p>' + `<div class="btns">${link('https://ioda.inetintel.cc.gatech.edu/country/' + o.code, 'Verlauf bei IODA')}</div>`)};
+      it.lat = c[0]; it.lon = c[1]; l.items.push(it);
+      l.group.addLayer(L.marker([c[0], c[1]], {icon: L.divIcon({className:'', html:'<div class="ring" style="width:34px;height:34px"></div>', iconSize:[34, 34]}), keyboard:false}).on('click', it.open));
+      dotMarker(c[0], c[1], '#ff5a5f', 5, Object.assign({}, it), {items:[], group:l.group});
+    }
+    l.count = l.items.length;
+  },
+  async sats(l){
+    const txt = await getJSON('https://celestrak.org/NORAD/elements/gp.php?GROUP=visual&FORMAT=tle', {text:true});
+    const st = await getJSON('https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=tle', {text:true}).catch(() => '');
+    const lines = (st + '\n' + txt).split(/\r?\n/).map(s => s.trimEnd()).filter(Boolean);
+    l.group.clearLayers(); l.items = []; sats = []; issTrack = null; const seen = new Set();
+    for (let k = 0; k + 2 < lines.length + 1; k += 3){
+      const [n, a, b] = [lines[k], lines[k + 1], lines[k + 2]]; if (!a || !b || a[0] !== '1') continue;
+      const id = a.slice(2, 7).trim(); if (seen.has(id)) continue; seen.add(id);
+      try { sats.push({name:n.trim(), id, rec: satellite.twoline2satrec(a, b)}); } catch(e){}
+    }
+    l.count = sats.length; drawSats();
+  },
+  async choke(l){
+    l.group.clearLayers(); l.items = [];
+    const ships = byId.ships.items;
+    for (const [name, lat, lon, txt] of CHOKE){
+      const live = /AIS/.test(txt) && ships.length ? ships.filter(s => dist(lat, lon, s.lat, s.lon) < 60).length : null;
+      const it = {id:'c' + name, name, kind:'Meerenge', open: () => card('Meerenge', '#5fd39a', name, `<p class="note" style="color:var(--ink);font-size:15px">${esc(txt)}</p>` +
+        (live != null ? rows([['Schiffe im Umkreis 60 km', fmt.format(live)], ['Stand', hhmm(byId.ships.t || Date.now())]]) : '') +
+        `<div class="btns"><button type="button" id="zoomTo">Hinzoomen</button></div>`, c => c.querySelector('#zoomTo').onclick = () => map.flyTo([lat, lon], 8))};
+      dotMarker(lat, lon, '#5fd39a', 7, it, l, {color:'#5fd39a', weight:2, fillOpacity:.25});
+    }
+    l.count = l.items.length;
+  }
+};
+
+/* ---------- Überlagerungen: Radar, Tag/Nacht ---------- */
+const OV = {radar: store.get('radar', false), night: store.get('night', true)};
+let radarLayer = null, radarT = 0, nightLayer = null;
+async function radar(){
+  if (radarLayer){ map.removeLayer(radarLayer); radarLayer = null; }
+  if (!OV.radar) return renderOverlays();
+  try {
+    const j = await getJSON('https://api.rainviewer.com/public/weather-maps.json');
+    const fr = j.radar.past[j.radar.past.length - 1]; radarT = fr.time * 1000;
+    radarLayer = L.tileLayer(j.host + fr.path + '/256/{z}/{x}/{y}/2/1_1.png', {opacity:.65, maxNativeZoom:7, maxZoom:19, zIndex:5, attribution:'Radar © RainViewer'}).addTo(map);
+  } catch(e){ toast('Wetterradar gerade nicht erreichbar'); }
+  renderOverlays();
+}
+function night(){
+  if (nightLayer){ map.removeLayer(nightLayer); nightLayer = null; }
+  if (!OV.night) return;
+  const r = Math.PI / 180, d = new Date(), n = d / 864e5 + 2440587.5 - 2451545;
+  const Lm = (280.46 + .9856474 * n) % 360, g = ((357.528 + .9856003 * n) % 360) * r;
+  const lam = (Lm + 1.915 * Math.sin(g) + .02 * Math.sin(2 * g)) * r, eps = (23.439 - 4e-7 * n) * r;
+  const dec = Math.asin(Math.sin(eps) * Math.sin(lam)), ra = Math.atan2(Math.cos(eps) * Math.sin(lam), Math.cos(lam));
+  const gmst = ((18.697374558 + 24.06570982441908 * n) % 24) * 15;
+  let sunLon = ra / r - gmst; sunLon = ((sunLon + 540) % 360) - 180;
+  const pts = []; for (let lon = -540; lon <= 540; lon += 2) pts.push([Math.atan(-Math.cos((lon - sunLon) * r) / Math.tan(dec)) / r, lon]);
+  const pole = dec > 0 ? -90 : 90; pts.push([pole, 540], [pole, -540]);
+  nightLayer = L.polygon(pts, {stroke:false, fillColor:'#000814', fillOpacity:.32, interactive:false}).addTo(map);
+}
+function renderOverlays(){
+  $('#overlays').innerHTML = [['radar', 'Wetterradar', 'RainViewer' + (OV.radar && radarT ? ' · ' + hhmm(radarT) : ''), '#7fd3ff'], ['night', 'Tag und Nacht', 'Sonnenstand, berechnet', '#9fb3bb']]
+    .map(([k, n, s, c]) => `<label class="layer" style="--c:${c}"><input type="checkbox" data-ov="${k}" ${OV[k] ? 'checked' : ''}><span class="sw"></span><span>${n}</span><span class="n"></span><span class="s">${esc(s)}</span></label>`).join('');
+}
+$('#overlays').addEventListener('change', e => {
+  const k = e.target.dataset.ov; OV[k] = e.target.checked; store.set(k, OV[k]);
+  k === 'radar' ? radar() : night();
+});
+
+/* ---------- Märkte ---------- */
+async function markets(){
+  try {
+    const j = await getJSON('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,pax-gold&vs_currencies=eur&include_24hr_change=true');
+    const eur = v => new Intl.NumberFormat('de-DE', {style:'currency', currency:'EUR', maximumFractionDigits:0}).format(v);
+    $('#markets').innerHTML = [['Bitcoin', 'bitcoin'], ['Ethereum', 'ethereum'], ['Gold (1 Unze, PAXG)', 'pax-gold']].map(([n, k]) => {
+      const x = j[k]; if (!x) return ''; const ch = x.eur_24h_change || 0;
+      return `<div class="row"><span>${n}</span><b>${eur(x.eur)} <span class="${ch >= 0 ? 'up' : 'down'}">${ch >= 0 ? '+' : ''}${n1(ch)} %</span></b></div>`;
+    }).join('') + '<p class="note">24-h-Änderung, Quelle CoinGecko.</p>';
+  } catch(e){ $('#markets').innerHTML = '<p class="empty">Kursdaten gerade nicht erreichbar.</p>'; }
+}
+
+/* ---------- Ticker ---------- */
+function renderTicker(){
+  const list = [
+    ...byId.quakes.items.filter(x => x.mag >= 4.5).map(x => ({...x, c:'#f0b43c'})),
+    ...byId.alerts.items.map(x => ({...x, c: x.red ? '#ff3b5c' : '#c77dff'})),
+    ...byId.net.items.map(x => ({...x, c:'#ff5a5f'})),
+    ...byId.events.items.filter(x => Date.now() - x.t < 3 * 864e5).map(x => ({...x, c:'#ff8a3d'}))
+  ].filter(x => x.t).sort((a, b) => b.t - a.t).slice(0, 40);
+  tickItems = list;
+  $('#tick').innerHTML = list.length ? list.map((x, k) => `<button type="button" data-k="${k}" style="--c:${x.c}"><i></i>${esc(x.name)} <time>${esc(ago(x.t))}</time></button>`).join('') : '<span class="empty">Warte auf Meldungen …</span>';
+}
+let tickItems = [];
+$('#tick').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return; const x = tickItems[+b.dataset.k];
+  map.flyTo([x.lat, x.lon], Math.max(map.getZoom(), 5)); x.open();
+});
+
+/* ---------- Suche ---------- */
+let sTimer = null, sHits = [], sGen = 0;
+const qEl = $('#q'), res = $('#results');
+function showHits(){
+  res.style.display = sHits.length ? 'block' : 'none';
+  res.innerHTML = sHits.map((h, k) => `<button type="button" data-k="${k}" role="option"><span>${esc(h.name)}</span><small>${esc(h.kind)}</small></button>`).join('');
+}
+qEl.addEventListener('input', () => {
+  const q = qEl.value.trim().toLowerCase(); clearTimeout(sTimer);
+  if (q.length < 2){ sHits = []; return showHits(); }
+  const local = [];
+  for (const l of LAYERS){ if (!l.on) continue; for (const it of l.items){ if (it.name && it.name.toLowerCase().includes(q)){ local.push(it); if (local.length >= 8) break; } } if (local.length >= 8) break; }
+  sHits = local; showHits();
+  const gen = ++sGen;
+  if (q.length >= 3) sTimer = setTimeout(async () => {
+    try {
+      const j = await getJSON('https://nominatim.openstreetmap.org/search?format=json&limit=5&accept-language=de&q=' + encodeURIComponent(q));
+      if (gen !== sGen || qEl.value.trim().toLowerCase() !== q) return;
+      sHits = [...local, ...j.map(p => ({name:p.display_name, kind:'Ort', lat:+p.lat, lon:+p.lon, bbox:p.boundingbox}))]; showHits();
+    } catch(e){}
+  }, 650);
+});
+res.addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return; const h = sHits[+b.dataset.k];
+  res.style.display = 'none'; qEl.blur(); sGen++; clearTimeout(sTimer);
+  if (h.bbox){ const [s, n, w, o] = h.bbox.map(Number); map.flyToBounds([[s, w], [n, o]], {maxZoom:13}); }
+  else { map.flyTo([h.lat, h.lon], Math.max(map.getZoom(), 10)); h.open(); }
+});
+$('#searchForm').addEventListener('submit', e => { e.preventDefault(); const f = res.querySelector('button'); f && f.click(); });
+document.addEventListener('click', e => { if (!e.target.closest('.search')) res.style.display = 'none'; });
+
+/* ---------- Was ist hier? ---------- */
+map.on('contextmenu', async e => {
+  const {lat, lng} = e.latlng; const R = 50;
+  const near = LAYERS.filter(l => l.on && l.items.length).map(l => [l.name, l.items.filter(it => it.lat != null && dist(lat, lng, it.lat, it.lon) < R).length]).filter(x => x[1]);
+  card('Was ist hier?', '#eef2ee', 'Ort wird gesucht …', rows([['Koordinaten', lat.toFixed(3) + '°, ' + lng.toFixed(3) + '°'], ...near.map(([n, c]) => [n + ' (50 km)', fmt.format(c)])]) + (near.length ? '' : '<p class="note">Im Umkreis von 50 km sind keine Objekte der aktiven Ebenen.</p>'));
+  try {
+    const j = await getJSON(`https://nominatim.openstreetmap.org/reverse?format=json&zoom=10&accept-language=de&lat=${lat}&lon=${lng}`);
+    const h = $('#card h3'); if (h) h.textContent = j.display_name || 'Offenes Meer oder unbewohntes Gebiet';
+  } catch(err){ const h = $('#card h3'); if (h) h.textContent = 'Ortsname nicht verfügbar'; }
+});
+
+/* ---------- Mobil: Panel ---------- */
+$('#togglePanel').addEventListener('click', () => {
+  const o = document.body.classList.toggle('panel-open'); $('#togglePanel').setAttribute('aria-expanded', o);
+  if (o) closeCard();
+});
+
+/* ---------- Start ---------- */
+let flightT = null;
+map.on('moveend', () => { clearTimeout(flightT); flightT = setTimeout(() => run(byId.flights), 700); });
+function clock(){ const d = new Date(); $('#clock').firstChild.textContent = d.toISOString().slice(11, 19); }
+setInterval(clock, 1000); clock();
+renderLayers(); renderOverlays(); renderFavs(); renderTicker();
+LAYERS.forEach(l => { if (l.on){ l.group.addTo(map); run(l); } });
+night(); radar(); markets();
+setInterval(() => {
+  const now = Date.now();
+  LAYERS.forEach(l => { if (l.on && l.every && now - l.t > l.every * 1000 && !l.busy) run(l); });
+  renderLayers();
+}, 10000);
+setInterval(night, 300000);
+setInterval(() => { if (OV.radar) radar(); }, 600000);
+setInterval(markets, 300000);
+setInterval(renderTicker, 60000);
+}
+</script>
+</body>
+</html>
